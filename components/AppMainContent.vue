@@ -30,19 +30,19 @@
                 class="max-h-[65vh] lg:max-h-[60vh] overflow-y-auto px-2 lg:px-4 flex flex-col items-center space-y-2 lg:space-y-4 py-2 lg:py-4 h-full"
               >
                 <div
-                  v-for="(line, index) in lrcLines"
+                  v-for="(line, index) in props.lrcLines"
                   :key="index"
                   :ref="el => lineRefs[index] = el"
                   @click="$emit('seekTo', line.time / 1000)"
                   :class="[
                     'transition-all duration-500 cursor-pointer text-center px-2 lg:px-6 py-1 lg:py-3 rounded-lg lg:rounded-xl touch-manipulation',
-                    currentLineIndex === index
+                    props.currentLineIndex === index
                       ? 'text-lg lg:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent transform scale-105'
                       : 'text-sm lg:text-xl text-gray-400 hover:text-gray-200'
                   ]"
                   :style="{ 
-                    opacity: currentLineIndex === index ? 1 : 0.6,
-                    transform: currentLineIndex === index ? 'scale(1.05)' : 'scale(1)'
+                    opacity: props.currentLineIndex === index ? 1 : 0.6,
+                    transform: props.currentLineIndex === index ? 'scale(1.05)' : 'scale(1)'
                   }"
                 >
                   {{ line.text }}
@@ -73,9 +73,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 
-defineProps({
+const props = defineProps({
   selectedLesson: {
     type: Object,
     default: null
@@ -91,16 +91,35 @@ defineProps({
   lessonText: {
     type: String,
     default: ''
-  },
-  lyricContainer: {
-    type: Object,
-    default: null
-  },
-  lineRefs: {
-    type: Array,
-    default: () => []
   }
 })
+
+// 定义 lyricContainer 和 lineRefs 为 ref
+const lyricContainer = ref(null)
+const lineRefs = ref([])
+
+watch(() => props.currentLineIndex, (newIndex) => {
+  if (newIndex > -1 && lyricContainer.value && lineRefs.value[newIndex]) {
+    nextTick(() => {
+      const currentLineEl = lineRefs.value[newIndex]
+      const containerEl = lyricContainer.value
+
+      if (currentLineEl && containerEl) {
+        const containerHeight = containerEl.offsetHeight
+        const lineOffsetTop = currentLineEl.offsetTop
+        const lineHeight = currentLineEl.offsetHeight
+
+        // 计算滚动位置，使当前行居中
+        const scrollTop = lineOffsetTop - (containerHeight / 2) + (lineHeight / 2)
+
+        containerEl.scrollTo({
+          top: scrollTop,
+          behavior: 'smooth'
+        })
+      }
+    })
+  }
+}, { immediate: true })
 
 defineEmits(['seekTo'])
 </script>
